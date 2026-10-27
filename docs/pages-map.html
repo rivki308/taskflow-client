@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת עמודים – TaskFlow Pro</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #5f6670;
+    --border: #d8dbe0;
+    --public: #6b7280;
+    --public-bg: #f1f2f4;
+    --auth: #2563eb;
+    --auth-bg: #e8effd;
+    --admin: #c2410c;
+    --admin-bg: #fdeee6;
+    --layout: #047857;
+    --layout-bg: #e3f5ee;
+    --arrow: #4b5563;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --surface: #1f2228;
+      --text: #e8eaed;
+      --muted: #a0a6b0;
+      --border: #3a3f48;
+      --public: #a3a9b3;
+      --public-bg: #2a2e35;
+      --auth: #7aa5ff;
+      --auth-bg: #1e2a44;
+      --admin: #f59a6b;
+      --admin-bg: #3a261c;
+      --layout: #4fd1a5;
+      --layout-bg: #173229;
+      --arrow: #a0a6b0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+    line-height: 1.6;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 28px; }
+  h2 { margin: 40px 0 12px; font-size: 21px; }
+  .lead { color: var(--muted); margin: 0 0 8px; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.92em;
+    direction: ltr;
+    unicode-bidi: embed;
+    background: var(--public-bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 16px 0; font-size: 14px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; display: inline-block; }
+  .dot.public { border-color: var(--public); background: var(--public-bg); }
+  .dot.auth { border-color: var(--auth); background: var(--auth-bg); }
+  .dot.admin { border-color: var(--admin); background: var(--admin-bg); }
+  .dot.layout { border-color: var(--layout); background: var(--layout-bg); }
+
+  /* עץ הניתוב */
+  .tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+  .tree ul { margin-right: 22px; padding-right: 18px; border-right: 2px solid var(--border); }
+  .tree li { margin: 8px 0; position: relative; }
+  .tree ul > li::before {
+    content: ""; position: absolute; right: -18px; top: 20px;
+    width: 14px; border-top: 2px solid var(--border);
+  }
+  .node {
+    display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+    padding: 7px 12px; border-radius: 8px; border: 2px solid; background: var(--surface);
+  }
+  .node b { font-size: 15px; }
+  .node small { color: var(--muted); font-size: 13px; }
+  .node.public { border-color: var(--public); background: var(--public-bg); }
+  .node.auth { border-color: var(--auth); background: var(--auth-bg); }
+  .node.admin { border-color: var(--admin); background: var(--admin-bg); }
+  .node.layout { border-color: var(--layout); background: var(--layout-bg); }
+  .node.wrapper { border-style: dashed; background: var(--surface); }
+
+  /* תרשים הזרימה */
+  .flow { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; }
+  .flow svg { display: block; width: 100%; height: auto; }
+  .flow text { font-family: "Segoe UI", Arial, sans-serif; fill: var(--text); }
+  .flow .label { font-size: 12px; fill: var(--muted); }
+  .flow .route { font-size: 12px; fill: var(--muted); font-family: Consolas, monospace; direction: ltr; unicode-bidi: embed; }
+  .flow-notes { margin: 6px 12px 4px; font-size: 13px; color: var(--muted); }
+
+  /* כרטיסי עמודים */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-top: 5px solid var(--auth); border-radius: 10px; padding: 14px 16px;
+  }
+  .card.public { border-top-color: var(--public); }
+  .card.admin { border-top-color: var(--admin); }
+  .card h3 { margin: 0 0 2px; font-size: 17px; }
+  .card .path { margin: 0 0 10px; }
+  .card dl { margin: 0; font-size: 14px; }
+  .card dt { font-weight: 600; margin-top: 8px; }
+  .card dd { margin: 2px 0 0; color: var(--muted); }
+  .note {
+    margin-top: 14px; padding: 12px 14px; border-radius: 8px;
+    background: var(--auth-bg); border-right: 4px solid var(--auth); font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>מפת העמודים והניתוב</h1>
+  <p class="lead">TaskFlow Pro – צד לקוח. מבוסס על הצ'קליסט, שלבים 2 עד 6.</p>
+
+  <div class="legend">
+    <span><i class="dot public"></i> ציבורי (בלי התחברות)</span>
+    <span><i class="dot auth"></i> משתמשת מחוברת (מנהלת + עובדת)</span>
+    <span><i class="dot admin"></i> מנהלת בלבד</span>
+    <span><i class="dot layout"></i> Layout (מסגרת קבועה)</span>
+  </div>
+
+  <h2>1. עץ הניתוב (מה שייכתב ב־App.tsx)</h2>
+  <p class="lead">כל רמה בעץ היא <code>&lt;Route&gt;</code> שעוטף את הרמה שמתחתיו. מסגרת מקווקווה = רכיב שמגן על הנתיבים שבתוכו.</p>
+
+  <ul class="tree">
+    <li><span class="node wrapper"><b>main.tsx</b><small>עוטפים זה את זה:</small><code>BrowserRouter &gt; QueryClientProvider &gt; AuthProvider &gt; App</code></span>
+      <ul>
+        <li><span class="node public"><b>LoginPage</b><code>/login</code><small>משתמשת מחוברת מועברת ל־<code>/</code></small></span></li>
+        <li><span class="node wrapper"><b>ProtectedRoute</b><small>לא מחוברת ← מעבר ל־<code>/login</code></small></span>
+          <ul>
+            <li><span class="node layout"><b>MainLayout</b><code>Header + &lt;Outlet /&gt;</code></span>
+              <ul>
+                <li><span class="node auth"><b>DashboardPage</b><code>/</code><small>(index)</small></span></li>
+                <li><span class="node auth"><b>TasksPage</b><code>/tasks</code></span></li>
+                <li><span class="node auth"><b>TaskDetailsPage</b><code>/tasks/:id</code></span></li>
+                <li><span class="node auth"><b>ProjectsPage</b><code>/projects</code><small>אופציונלי</small></span></li>
+                <li><span class="node wrapper"><b>AdminRoute</b><small>לא Admin ← "אין הרשאה" / מעבר ל־<code>/</code></small></span>
+                  <ul>
+                    <li><span class="node admin"><b>TaskFormPage</b><code>/tasks/new</code><small>יצירה</small></span></li>
+                    <li><span class="node admin"><b>TaskFormPage</b><code>/tasks/:id/edit</code><small>עריכה – אותו עמוד</small></span></li>
+                    <li><span class="node admin"><b>EmployeesPage</b><code>/employees</code></span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><span class="node public"><b>NotFoundPage</b><code>*</code><small>כל נתיב שלא קיים</small></span></li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>2. מעבר בין העמודים</h2>
+  <p class="lead">החיצים מראים איך המשתמשת עוברת מעמוד לעמוד, ומה גורם למעבר.</p>
+
+  <div class="flow">
+    <svg viewBox="0 0 900 460" role="img" aria-label="תרשים מעבר בין העמודים">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--arrow)"/>
+        </marker>
+      </defs>
+
+      <!-- חיצים -->
+      <g stroke="var(--arrow)" stroke-width="1.8" fill="none" marker-end="url(#arr)">
+        <line x1="450" y1="78" x2="450" y2="128"/>
+        <line x1="410" y1="188" x2="160" y2="250"/>
+        <line x1="450" y1="188" x2="450" y2="250"/>
+        <line x1="490" y1="188" x2="740" y2="250"/>
+        <line x1="415" y1="308" x2="300" y2="378"/>
+        <line x1="485" y1="308" x2="600" y2="378"/>
+        <line x1="538" y1="398" x2="364" y2="398"/>
+        <line x1="364" y1="424" x2="538" y2="424"/>
+        <path d="M 700 378 C 730 320, 640 282, 534 282"/>
+      </g>
+
+      <!-- תוויות על החיצים -->
+      <g class="label" text-anchor="middle">
+        <text x="520" y="108">התחברות מוצלחת</text>
+        <text x="255" y="210">תפריט (Header)</text>
+        <text x="495" y="225">תפריט</text>
+        <text x="650" y="210">תפריט (רק מנהלת)</text>
+        <text x="300" y="345">"משימה חדשה"</text>
+        <text x="300" y="360">(מנהלת)</text>
+        <text x="610" y="345">לחיצה על כרטיס</text>
+        <text x="450" y="391">"עריכה" (מנהלת)</text>
+        <text x="450" y="442">שמירה ✓</text>
+        <text x="768" y="352">מחיקה ✓</text>
+      </g>
+
+      <!-- עמודים -->
+      <g text-anchor="middle">
+        <rect x="370" y="20" width="160" height="58" rx="9" fill="var(--public-bg)" stroke="var(--public)" stroke-width="2"/>
+        <text x="450" y="45" font-size="15" font-weight="600">התחברות</text>
+        <text x="450" y="65" class="route">/login</text>
+
+        <rect x="370" y="130" width="160" height="58" rx="9" fill="var(--auth-bg)" stroke="var(--auth)" stroke-width="2"/>
+        <text x="450" y="155" font-size="15" font-weight="600">לוח בקרה</text>
+        <text x="450" y="175" class="route">/</text>
+
+        <rect x="60" y="252" width="160" height="58" rx="9" fill="var(--auth-bg)" stroke="var(--auth)" stroke-width="2"/>
+        <text x="140" y="277" font-size="15" font-weight="600">פרויקטים</text>
+        <text x="140" y="297" class="route">/projects</text>
+
+        <rect x="370" y="252" width="160" height="58" rx="9" fill="var(--auth-bg)" stroke="var(--auth)" stroke-width="2"/>
+        <text x="450" y="277" font-size="15" font-weight="600">רשימת משימות</text>
+        <text x="450" y="297" class="route">/tasks</text>
+
+        <rect x="680" y="252" width="160" height="58" rx="9" fill="var(--admin-bg)" stroke="var(--admin)" stroke-width="2"/>
+        <text x="760" y="277" font-size="15" font-weight="600">עובדים</text>
+        <text x="760" y="297" class="route">/employees</text>
+
+        <rect x="200" y="380" width="164" height="64" rx="9" fill="var(--admin-bg)" stroke="var(--admin)" stroke-width="2"/>
+        <text x="282" y="403" font-size="15" font-weight="600">טופס משימה</text>
+        <text x="282" y="421" class="route">/tasks/new</text>
+        <text x="282" y="437" class="route">/tasks/:id/edit</text>
+
+        <rect x="540" y="380" width="164" height="64" rx="9" fill="var(--auth-bg)" stroke="var(--auth)" stroke-width="2"/>
+        <text x="622" y="407" font-size="15" font-weight="600">פרטי משימה</text>
+        <text x="622" y="429" class="route">/tasks/:id</text>
+
+        <rect x="700" y="20" width="160" height="58" rx="9" fill="var(--public-bg)" stroke="var(--public)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="780" y="45" font-size="15" font-weight="600">לא נמצא</text>
+        <text x="780" y="65" class="route">*</text>
+      </g>
+
+    </svg>
+    <p class="flow-notes">התפריט שב־Header מופיע בכל העמודים שבתוך MainLayout, כך שאפשר לעבור ממסך כלשהו לכל אחד מארבעת המסכים הראשיים.<br>
+    "התנתקות" ב־Header, או תשובת 401 מהשרת בכל עמוד ← חזרה ל־<code>/login</code>.</p>
+  </div>
+
+  <h2>3. פירוט כל עמוד</h2>
+  <div class="cards">
+
+    <article class="card public">
+      <h3>התחברות – LoginPage</h3>
+      <p class="path"><code>/login</code> · ציבורי</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>טופס React Hook Form (email, password), ErrorMessage</dd>
+        <dt>פנייה לשרת</dt><dd><code>POST /api/auth/login</code> דרך <code>login</code> שב־Context</dd>
+        <dt>מעבר אחרי הצלחה</dt><dd>ל־<code>/</code></dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <h3>לוח בקרה – DashboardPage</h3>
+      <p class="path"><code>/</code> · מחוברת</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>StatCard (כמה פעמים), Loading, ErrorMessage. אופציונלי: TaskCard למשימות באיחור</dd>
+        <dt>פנייה לשרת</dt><dd><code>GET /api/dashboard/summary</code>, אופציונלי <code>GET /api/tasks?overdue=true&amp;pageSize=5</code></dd>
+        <dt>לפי תפקיד</dt><dd>מנהלת רואה גם פרויקטים ועובדים</dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <h3>רשימת משימות – TasksPage</h3>
+      <p class="path"><code>/tasks</code> · מחוברת</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>TaskFilters, TaskCard (לכל משימה), Pagination, Loading, ErrorMessage</dd>
+        <dt>State בעמוד</dt><dd>הסינונים: search, status, priority, projectId, assignedTo, sortBy, sortOrder, page</dd>
+        <dt>פנייה לשרת</dt><dd><code>GET /api/tasks?...</code>, <code>GET /api/projects</code>, מנהלת: <code>GET /api/users?role=Employee</code></dd>
+        <dt>מעברים</dt><dd>כרטיס ← <code>/tasks/:id</code> · "משימה חדשה" (מנהלת) ← <code>/tasks/new</code></dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <h3>פרטי משימה – TaskDetailsPage</h3>
+      <p class="path"><code>/tasks/:id</code> · מנהלת + בעלת המשימה</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>StatusBadge, PriorityBadge, CommentList, CommentForm, Loading, ErrorMessage</dd>
+        <dt>מאיפה ה־id</dt><dd><code>useParams()</code></dd>
+        <dt>פנייה לשרת</dt><dd><code>GET /api/tasks/:id</code>, <code>PATCH</code> (סטטוס), <code>DELETE</code> (מנהלת), <code>GET/POST /api/tasks/:id/comments</code></dd>
+        <dt>מעברים</dt><dd>"עריכה" ← <code>/tasks/:id/edit</code> · אחרי מחיקה ← <code>/tasks</code></dd>
+      </dl>
+    </article>
+
+    <article class="card admin">
+      <h3>טופס משימה – TaskFormPage</h3>
+      <p class="path"><code>/tasks/new</code> · <code>/tasks/:id/edit</code> · מנהלת</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>TaskForm אחד ליצירה ולעריכה (Props: defaultValues, onSubmit, isEditing)</dd>
+        <dt>איך יודעים מה המצב</dt><dd>יש <code>id</code> ב־useParams ← עריכה. אין ← יצירה</dd>
+        <dt>פנייה לשרת</dt><dd><code>POST /api/tasks</code> או <code>GET</code> + <code>PATCH /api/tasks/:id</code>, רשימות בחירה: <code>GET /api/users?role=Employee</code>, <code>GET /api/projects?status=Active</code></dd>
+        <dt>מעבר אחרי שמירה</dt><dd>ל־<code>/tasks/:id</code></dd>
+      </dl>
+    </article>
+
+    <article class="card admin">
+      <h3>עובדים – EmployeesPage</h3>
+      <p class="path"><code>/employees</code> · מנהלת</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>רשימת משתמשים, EmployeeForm, Loading, ErrorMessage</dd>
+        <dt>פנייה לשרת</dt><dd><code>GET /api/users?search=</code>, <code>POST /api/users</code></dd>
+        <dt>אחרי הוספה</dt><dd>invalidate לרשימה – העובד מופיע בלי רענון</dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <h3>פרויקטים – ProjectsPage</h3>
+      <p class="path"><code>/projects</code> · מחוברת · אופציונלי</p>
+      <dl>
+        <dt>קומפוננטות</dt><dd>רשימה + סינון סטטוס. מנהלת: טופס יצירה ועריכה</dd>
+        <dt>פנייה לשרת</dt><dd><code>GET /api/projects?status=</code>, <code>POST</code>, <code>PATCH /api/projects/:id</code></dd>
+      </dl>
+    </article>
+
+    <article class="card public">
+      <h3>לא נמצא – NotFoundPage</h3>
+      <p class="path"><code>*</code> · ציבורי</p>
+      <dl>
+        <dt>תוכן</dt><dd>"העמוד לא נמצא" + קישור ללוח הבקרה</dd>
+        <dt>פנייה לשרת</dt><dd>אין</dd>
+      </dl>
+    </article>
+  </div>
+
+  <div class="note">
+    <b>רכיבים משותפים</b> (בתיקייה <code>components</code>): Header, Loading, ErrorMessage, StatusBadge, PriorityBadge, StatCard, TaskCard, Pagination.
+    כל אחד נכתב פעם אחת ומשמש בכמה עמודים – כך אין שכפול קוד.
+  </div>
+</main>
+</body>
+</html>
