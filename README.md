@@ -52,7 +52,7 @@
 
 ### דרישות מוקדמות
 - [Node.js](https://nodejs.org/) גרסה 20 ומעלה
-- השרת של הפרויקט רץ (לפי `backend-project/START-HERE.md`)
+- [השרת של הפרויקט](https://github.com/rivki308/taskflow-backend) רץ (לפי `START-HERE.md` שם)
 
 ### שלבים
 
